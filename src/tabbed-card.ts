@@ -67,21 +67,21 @@ export class TabbedCard extends LitElement {
       --tab-container-bg: rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.06);
       --tab-radius: var(--chip-border-radius, 18px);
       --tab-inner-radius: 10px;
-      --tab-bar-pad: 4px;
+      --tab-bar-pad: 6px;
       --tab-text: rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.7);
       --tab-shadow: var(--ha-card-box-shadow, 0 1px 3px rgba(0, 0, 0, 0.12));
       display: block;
     }
 
     /* The whole strip is one rounded capsule (background + shadow on the
-       container), with the buttons sitting inside as separate segments. */
+       container), spanning the card width with the buttons sitting inside as
+       separate segments that share the space evenly. */
     .tab-bar {
       display: flex;
       flex-wrap: nowrap;
-      align-items: center;
+      align-items: stretch;
       gap: var(--tab-bar-pad);
-      width: fit-content;
-      max-width: 100%;
+      width: 100%;
       padding: var(--tab-bar-pad);
       background: var(--tab-container-bg);
       border-radius: var(--tab-radius);
@@ -89,12 +89,14 @@ export class TabbedCard extends LitElement {
     }
 
     .tab {
+      flex: 1 1 0;
+      min-width: 0;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       gap: 8px;
       min-height: 36px;
-      padding: 6px 18px;
+      padding: 8px 18px;
       border: none;
       border-radius: var(--tab-inner-radius);
       background: transparent;
@@ -154,7 +156,15 @@ export class TabbedCard extends LitElement {
       display: inline-block;
     }
 
-    section,
+    /* The tab strip spans the full card width; the tab content below is
+       capped and centered so it doesn't stretch awkwardly on very wide
+       screens (e.g. when the card lives in a panel view). */
+    section {
+      display: block;
+      max-width: 760px;
+      margin: 16px auto 0;
+    }
+
     article {
       display: block;
     }
