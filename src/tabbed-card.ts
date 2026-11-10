@@ -63,23 +63,29 @@ export class TabbedCard extends LitElement {
   static styles = css`
     :host {
       --tab-accent: var(--primary-color, #03a9f4);
-      --tab-active-bg: rgba(var(--rgb-primary-color, 3, 169, 244), 0.16);
-      --tab-bg: var(
-        --ha-card-background,
-        var(--card-background-color, #ffffff)
-      );
+      --tab-active-bg: rgba(var(--rgb-primary-color, 3, 169, 244), 0.18);
+      --tab-container-bg: rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.06);
       --tab-radius: var(--chip-border-radius, 18px);
+      --tab-inner-radius: 10px;
+      --tab-bar-pad: 4px;
       --tab-text: rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.7);
       --tab-shadow: var(--ha-card-box-shadow, 0 1px 3px rgba(0, 0, 0, 0.12));
       display: block;
     }
 
+    /* The whole strip is one rounded capsule (background + shadow on the
+       container), with the buttons sitting inside as separate segments. */
     .tab-bar {
       display: flex;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       align-items: center;
-      gap: 8px;
-      padding: 2px 0 14px;
+      gap: var(--tab-bar-pad);
+      width: fit-content;
+      max-width: 100%;
+      padding: var(--tab-bar-pad);
+      background: var(--tab-container-bg);
+      border-radius: var(--tab-radius);
+      box-shadow: var(--tab-shadow);
     }
 
     .tab {
@@ -90,10 +96,9 @@ export class TabbedCard extends LitElement {
       min-height: 36px;
       padding: 6px 18px;
       border: none;
-      border-radius: var(--tab-radius);
-      background: var(--tab-bg);
+      border-radius: var(--tab-inner-radius);
+      background: transparent;
       color: var(--tab-text);
-      box-shadow: var(--tab-shadow);
       font-family: inherit;
       font-size: 14px;
       font-weight: 500;
@@ -105,8 +110,19 @@ export class TabbedCard extends LitElement {
       transition:
         background-color 0.18s ease,
         color 0.18s ease,
-        box-shadow 0.18s ease,
         transform 0.18s ease;
+    }
+
+    /* Only the OUTER corners follow the capsule's big radius; the inner
+       corners stay small, so the buttons read as separate segments while the
+       strip still looks like one continuous pill. */
+    .tab.first {
+      border-top-left-radius: calc(var(--tab-radius) - var(--tab-bar-pad));
+      border-bottom-left-radius: calc(var(--tab-radius) - var(--tab-bar-pad));
+    }
+    .tab.last {
+      border-top-right-radius: calc(var(--tab-radius) - var(--tab-bar-pad));
+      border-bottom-right-radius: calc(var(--tab-radius) - var(--tab-bar-pad));
     }
 
     .tab:hover {
@@ -120,7 +136,6 @@ export class TabbedCard extends LitElement {
     .tab.active {
       background: var(--tab-active-bg);
       color: var(--tab-accent);
-      box-shadow: none;
     }
 
     .tab:focus-visible {
@@ -145,9 +160,6 @@ export class TabbedCard extends LitElement {
     }
 
     @media (max-width: 480px) {
-      .tab-bar {
-        gap: 6px;
-      }
       .tab {
         padding: 6px 12px;
         font-size: 13px;
@@ -255,11 +267,17 @@ export class TabbedCard extends LitElement {
         ${this._tabs.map((tab, index) => {
           const active = index === this.selectedTabIndex;
           const attributes = tab?.attributes;
+          const posClass =
+            index === 0
+              ? "first"
+              : index === this._tabs.length - 1
+                ? "last"
+                : "";
           return html`
             <button
               type="button"
               role="tab"
-              class="tab ${active ? "active" : ""}"
+              class="tab ${posClass} ${active ? "active" : ""}"
               style=${ifDefined(styleMap(tab?.styles || {}))}
               aria-selected=${active ? "true" : "false"}
               @click=${() => (this.selectedTabIndex = index)}
