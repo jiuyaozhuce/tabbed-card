@@ -77,6 +77,7 @@ export class TabbedCard extends LitElement {
        container), spanning the card width with the buttons sitting inside as
        separate segments that share the space evenly. */
     .tab-bar {
+      box-sizing: border-box;
       display: flex;
       flex-wrap: nowrap;
       align-items: stretch;
