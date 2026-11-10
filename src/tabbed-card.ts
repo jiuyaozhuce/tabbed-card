@@ -1,48 +1,47 @@
-import { LitElement, html, PropertyValueMap, nothing } from "lit";
+import { LitElement, html, css, PropertyValueMap, nothing } from "lit";
 import { customElement, state, property } from "lit/decorators.js";
 import { styleMap } from "lit/directives/style-map.js";
 import { ifDefined } from "lit/directives/if-defined.js";
 import {
-  getLovelace,
-  hasConfigOrEntityChanged,
   HomeAssistant,
   LovelaceCard,
   LovelaceCardConfig,
   LovelaceCardEditor,
-  LovelaceConfig,
 } from "custom-card-helpers";
-import "./registry-patch.ts";
 import "./tabbed-card-editor";
-import "@material/mwc-tab-bar";
-import "@material/mwc-tab";
 
-interface mwcTabBarEvent extends Event {
-  detail: {
-    index: number;
-  };
+/**
+ * Mushroom-styled fork of kinghat/tabbed-card.
+ *
+ * Upstream renders an `mwc-tab-bar` (Material tabs with an underline
+ * indicator), which clashes with Mushroom dashboards. This fork keeps the
+ * exact same YAML schema (`tabs`, `attributes`, `styles`, `options`) and the
+ * same custom element name `tabbed-card`, but renders the tabs as rounded pill
+ * buttons using Home Assistant / Mushroom theme variables instead.
+ */
+
+interface TabAttributes {
+  label?: string;
+  icon?: string;
+  // Legacy mwc-tab attributes. Kept for config compatibility, ignored here.
+  isFadingIndicator?: boolean;
+  minWidth?: boolean;
+  isMinWidthIndicator?: boolean;
+  stacked?: boolean;
 }
 
 interface TabbedCardConfig extends LovelaceCardConfig {
-  options?: options;
-  styles?: {};
-  attributes?: {};
+  options?: {
+    defaultTabIndex?: number;
+  };
+  styles?: Record<string, string>;
+  attributes?: TabAttributes;
   tabs: Tab[];
 }
 
-interface options {
-  defaultTabIndex?: number;
-}
-
 interface Tab {
-  styles?: {};
-  attributes?: {
-    label?: string;
-    icon?: string;
-    isFadingIndicator?: boolean;
-    minWidth?: boolean;
-    isMinWidthIndicator?: boolean;
-    stacked?: boolean;
-  };
+  styles?: Record<string, string>;
+  attributes?: TabAttributes;
   card: LovelaceCardConfig;
 }
 
@@ -54,13 +53,107 @@ export class TabbedCard extends LitElement {
 
   @state() private _config!: TabbedCardConfig;
   @state() private _tabs!: Tab[];
-  @property() protected _styles = {
-    "--mdc-theme-primary": "var(--primary-text-color)", // Color of the activated tab's text, indicator, and ripple.
-    "--mdc-tab-text-label-color-default":
-      "rgba(var(--rgb-primary-text-color), 0.8)", // Color of an unactivated tab label.
-    "--mdc-tab-color-default": "rgba(var(--rgb-primary-text-color), 0.7)", // Color of an unactivated icon.
-    "--mdc-typography-button-font-size": "14px",
-  };
+
+  // `styles` from the YAML config is still applied to the tab bar so existing
+  // dashboards that set CSS custom properties keep working.
+  @property() protected _styles: Record<string, string> = {};
+
+  private _initialTabApplied = false;
+
+  static styles = css`
+    :host {
+      --tab-accent: var(--primary-color, #03a9f4);
+      --tab-active-bg: rgba(var(--rgb-primary-color, 3, 169, 244), 0.16);
+      --tab-bg: var(
+        --ha-card-background,
+        var(--card-background-color, #ffffff)
+      );
+      --tab-radius: var(--chip-border-radius, 18px);
+      --tab-text: rgba(var(--rgb-primary-text-color, 0, 0, 0), 0.7);
+      --tab-shadow: var(--ha-card-box-shadow, 0 1px 3px rgba(0, 0, 0, 0.12));
+      display: block;
+    }
+
+    .tab-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      padding: 2px 0 14px;
+    }
+
+    .tab {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 36px;
+      padding: 6px 18px;
+      border: none;
+      border-radius: var(--tab-radius);
+      background: var(--tab-bg);
+      color: var(--tab-text);
+      box-shadow: var(--tab-shadow);
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 500;
+      line-height: 1.2;
+      letter-spacing: 0.01em;
+      white-space: nowrap;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+      transition:
+        background-color 0.18s ease,
+        color 0.18s ease,
+        box-shadow 0.18s ease,
+        transform 0.18s ease;
+    }
+
+    .tab:hover {
+      transform: translateY(-1px);
+    }
+
+    .tab:active {
+      transform: translateY(0);
+    }
+
+    .tab.active {
+      background: var(--tab-active-bg);
+      color: var(--tab-accent);
+      box-shadow: none;
+    }
+
+    .tab:focus-visible {
+      outline: 2px solid var(--tab-accent);
+      outline-offset: 2px;
+    }
+
+    .tab ha-icon {
+      --mdc-icon-size: 18px;
+      width: 18px;
+      height: 18px;
+      flex: 0 0 18px;
+    }
+
+    .label {
+      display: inline-block;
+    }
+
+    section,
+    article {
+      display: block;
+    }
+
+    @media (max-width: 480px) {
+      .tab-bar {
+        gap: 6px;
+      }
+      .tab {
+        padding: 6px 12px;
+        font-size: 13px;
+      }
+    }
+  `;
 
   private async loadCardHelpers() {
     this._helpers = await (window as any).loadCardHelpers();
@@ -73,7 +166,9 @@ export class TabbedCard extends LitElement {
   static getStubConfig() {
     return {
       options: {},
-      tabs: [{ card: { type: "entity", entity: "sun.sun" }, attributes: { label: "Sun" } }],
+      tabs: [
+        { card: { type: "entity", entity: "sun.sun" }, attributes: { label: "Sun" } },
+      ],
     };
   }
 
@@ -83,11 +178,22 @@ export class TabbedCard extends LitElement {
     }
 
     this._config = config;
+    this._styles = { ...this._styles, ...(config.styles || {}) };
 
-    this._styles = {
-      ...this._styles,
-      ...this._config.styles,
-    };
+    // Upstream passed `defaultTabIndex` to mwc-tab-bar's activeIndex but still
+    // rendered from `selectedTabIndex`, so the option never worked. Apply it
+    // once on first config, then leave the user's current selection alone.
+    if (!this._initialTabApplied) {
+      const index = Number(config?.options?.defaultTabIndex ?? 0);
+      if (
+        Number.isInteger(index) &&
+        index >= 0 &&
+        index < (config.tabs?.length ?? 0)
+      ) {
+        this.selectedTabIndex = index;
+      }
+      this._initialTabApplied = true;
+    }
 
     this.loadCardHelpers();
   }
@@ -134,18 +240,9 @@ export class TabbedCard extends LitElement {
     return cardElement;
   }
 
-  async _rebuildCard(
-    cardElement: LovelaceCard,
-    cardConfig: LovelaceCardConfig,
-  ) {
-    console.log("_rebuildCard: ", cardElement, cardConfig);
-
+  async _rebuildCard(cardElement: LovelaceCard, cardConfig: LovelaceCardConfig) {
     const newCardElement = await this._helpers.createCardElement(cardConfig);
-
     cardElement.replaceWith(newCardElement);
-
-    // TODO: figure out a way to update the tabs array with the rebuilt card
-    // this._tabs.splice(this._tabs.indexOf(cardElement), 1, newCardElement);
   }
 
   render() {
@@ -154,35 +251,27 @@ export class TabbedCard extends LitElement {
     }
 
     return html`
-      <mwc-tab-bar
-        @MDCTabBar:activated=${(ev: mwcTabBarEvent) =>
-        (this.selectedTabIndex = ev.detail.index)}
-        style=${styleMap(this._styles)}
-        activeIndex=${ifDefined(this._config?.options?.defaultTabIndex)}
-      >
-        <!-- no horizontal scrollbar shown when tabs overflow in chrome -->
-        ${this._tabs.map(
-          (tab) =>
-            html`
-              <mwc-tab
-                style=${ifDefined(styleMap(tab?.styles || {}))}
-                label="${tab?.attributes?.label || nothing}"
-                ?hasImageIcon=${tab?.attributes?.icon}
-                ?isFadingIndicator=${tab?.attributes?.isFadingIndicator}
-                ?minWidth=${tab?.attributes?.minWidth}
-                ?isMinWidthIndicator=${tab?.attributes?.isMinWidthIndicator}
-                ?stacked=${tab?.attributes?.stacked}
-              >
-                ${tab?.attributes?.icon
-                ? html`<ha-icon
-                      slot="icon"
-                      icon="${tab?.attributes?.icon}"
-                    ></ha-icon>`
-                : html``}
-              </mwc-tab>
-            `,
-        )}
-      </mwc-tab-bar>
+      <div class="tab-bar" role="tablist" style=${styleMap(this._styles)}>
+        ${this._tabs.map((tab, index) => {
+          const active = index === this.selectedTabIndex;
+          const attributes = tab?.attributes;
+          return html`
+            <button
+              type="button"
+              role="tab"
+              class="tab ${active ? "active" : ""}"
+              style=${ifDefined(styleMap(tab?.styles || {}))}
+              aria-selected=${active ? "true" : "false"}
+              @click=${() => (this.selectedTabIndex = index)}
+            >
+              ${attributes?.icon
+                ? html`<ha-icon .icon=${attributes.icon}></ha-icon>`
+                : nothing}
+              <span class="label">${attributes?.label || nothing}</span>
+            </button>
+          `;
+        })}
+      </div>
       <section>
         <article>
           ${this._tabs.find((_, index) => index == this.selectedTabIndex)?.card}
@@ -201,6 +290,6 @@ declare global {
 (window as any).customCards = (window as any).customCards || [];
 (window as any).customCards.push({
   type: "tabbed-card",
-  name: "Tabbed Card",
-  description: "A tabbed card of cards.",
+  name: "Tabbed Card (Mushroom)",
+  description: "Rounded button tabs for Mushroom dashboards.",
 });

@@ -1,7 +1,7 @@
 {
   "name": "tabbed-card",
   "version": "0.1.0",
-  "description": "a custom card for home assistant that utilizes tabs to segregate individual cards.",
+  "description": "Mushroom-styled fork of kinghat/tabbed-card: rounded button tabs instead of Material underline tabs.",
   "keywords": [
     "home-assistant",
     "homeassistant",
@@ -13,11 +13,10 @@
   "scripts": {
     "build": "tsc && vite build",
     "build:no-check": "vite build",
+    "build:mushroom": "vite build && node -e \"require('fs').copyFileSync('dist/tabbed-card.js','tabbed-card.js')\"",
     "watch": "vite build --mode development"
   },
   "dependencies": {
-    "@material/mwc-tab": "^0.27.0",
-    "@material/mwc-tab-bar": "^0.27.0",
     "custom-card-helpers": "^1.9.0",
     "lit": "^2.6.1"
   },

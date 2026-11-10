@@ -1,4 +1,6 @@
 {
-  "name": "Tabbed Card",
-  "render_readme": true
+  "name": "Tabbed Card (Mushroom)",
+  "render_readme": true,
+  "content_in_root": true,
+  "filename": "tabbed-card.js"
 }

@@ -1,10 +1,45 @@
-# Tabbed Card
+# Tabbed Card (Mushroom)
 
-A custom card for home assistant that utilizes tabs to segregate individual cards.
+A custom card for Home Assistant that utilizes tabs to segregate individual cards.
 
-![Tabbed Card](assets/tabbed-card.png)
+> **This is a Mushroom-styled fork of [kinghat/tabbed-card](https://github.com/kinghat/tabbed-card).**
+> Upstream uses `mwc-tab-bar` (Material tabs with an underline indicator). This fork
+> replaces it with rounded pill buttons that follow Mushroom / Home Assistant theme
+> variables, so tabs look consistent with Mushroom dashboards. There is **no underline**
+> and no Material Web dependency.
+>
+> The custom element name (`custom:tabbed-card`) and the whole YAML schema are unchanged,
+> so existing dashboards work as-is, including `attributes.label`, `attributes.icon`,
+> `styles`, and `options.defaultTabIndex` (which this fork also fixes: upstream passed
+> it to `mwc-tab-bar` but rendered from a different property, so it never worked).
 
-## Installation
+## Style customization
+
+The buttons use theme variables with sensible fallbacks. Override them per card via
+`styles` or globally via `card_mod`:
+
+| Variable | Default |
+| --- | --- |
+| `--tab-accent` | `var(--primary-color)` |
+| `--tab-active-bg` | `rgba(var(--rgb-primary-color), 0.16)` |
+| `--tab-bg` | `var(--ha-card-background)` |
+| `--tab-radius` | `var(--chip-border-radius, 18px)` |
+| `--tab-text` | `rgba(var(--rgb-primary-text-color), 0.7)` |
+| `--tab-shadow` | `var(--ha-card-box-shadow)` |
+
+## Build
+
+```bash
+npm install
+npm run build:mushroom   # produces dist/tabbed-card.js and root tabbed-card.js
+```
+
+The root `tabbed-card.js` is committed so HACS can install it directly from the
+repository (`content_in_root` in `hacs.json`).
+
+---
+
+## Installation (upstream docs)
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Default-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
 
